@@ -1,0 +1,188 @@
+<tool id="gtf2gff3" name="gtf2gff3" version="0.1">
+  <description>Convert gtf format to gff3 format</description>
+  <command interpreter="perl">
+gtf2gff3.pl
+-t $gtf_file 
+-d $attr_delim
+-s $start_in_cds
+-p $stop_in_cds
+-f $gff3_file 
+-c $config_file
+-r '$attr_regex'
+</command>
+  <inputs>
+    <param format="gtf" name="gtf_file" type="data" label="gtf formatted file"/>
+    <param name="start_in_cds" type="boolean" truevalue="1" falsevalue="0" checked="True" label="Start codon found in CDS" help="see description below: START_IN_CDS"/>
+    <param name="stop_in_cds" type="boolean" truevalue="1" falsevalue="0" checked="False" label="Stop codon found in CDS" help="see description below: STOP_IN_CDS"/>
+    <param name="attr_delim" type="text" size="4" value='\s*;\s*' label="Attribute delimiter" help="see description below: ATTRB_DELIMITER"/>
+    <param name="attr_regex" type="text" size="50" value='^\s*(\S+)=(\"[^\"]+\")\s*$' label="Attribute regular expression" help="see description below: ATTRB_REGEX"/>
+ </inputs>
+  <outputs>
+    <data format="gff3" name="gff3_file" label="${tool.name} on ${on_string}: gff3 file"/>
+    <data format="tabular" name="config_file" label="${tool.name} on ${on_string}: config file"/>
+  </outputs>
+
+  <help>
+
+.. class:: infomark
+
+**What it does**
+
+This script will convert GTF formatted files to valid GFF3 formatted
+files.  It will map the value in column 3 (\"type\" column) to valid
+SO, however because many non standard terms may appear in that column
+in GTF files, you may edit the config file to provide your own GTF
+feature to SO mapping.  The script will also build gene models from
+exons, CDSs and other features given in the GTF file.  It is currently
+tested on Ensemble and Twinscan GTF, and it should work on any other
+files that follow those same specifications.  It does not work on GTF
+from the UCSC table browser because those files use the same ID for
+gene and transcript, so it is impossible to group multiple transcripts
+to a gene.
+
+.. class:: infomark
+
+**DEPENDENCIES**
+
+This script requires the following perl packages that are available
+from CPAN (www.cpan.org).
+
+Getopt::Long;
+
+Config::Std;
+
+-----
+
+**Example**
+
+Consider the following GTF
+
+chr1       protein_coding  exon    28163331        28164986        .       +       .        gene="gene_2" | mRNA="trnsc_5"
+
+chr1       protein_coding  CDS     28163331        28164986        .       +       0        gene="gene_2" | mRNA="trnsc_5"
+
+chr1       protein_coding  exon    28165075        28165231        .       +       .        gene="gene_2" | mRNA="trnsc_5"
+
+chr1       protein_coding  CDS     28165075        28165231        .       +       0        gene="gene_2" | mRNA="trnsc_5"
+
+chr1       protein_coding  exon    28173088        28173224        .       +       .        gene="gene_2" | mRNA="trnsc_5"
+
+chr1       protein_coding  CDS     28173088        28173224        .       +       2        gene="gene_2" | mRNA="trnsc_5"
+
+chr1       protein_coding  exon    28176514        28176665        .       +       .        gene="gene_2" | mRNA="trnsc_5"
+
+chr1       protein_coding  CDS     28176514        28176665        .       +       0        gene="gene_2" | mRNA="trnsc_5"
+
+chr1       protein_coding  exon    28176847        28176950        .       +       .        gene="gene_2" | mRNA="trnsc_5"
+
+chr1       protein_coding  CDS     28176847        28176950        .       +       1        gene="gene_2" | mRNA="trnsc_5"
+
+chr1       protein_coding  exon    28181630        28181713        .       +       .        gene="gene_2" | mRNA="trnsc_5"
+
+chr1       protein_coding  CDS     28181630        28181713        .       +       2        gene="gene_2" | mRNA="trnsc_5"
+
+chr1       protein_coding  exon    28187071        28187711        .       +       .        gene="gene_2" | mRNA="trnsc_5"
+
+chr1       protein_coding  CDS     28187071        28187381        .       +       2        gene="gene_2" | mRNA="trnsc_5"
+
+Let's assume that the start codon coordinates are included within the
+CDS, but that the stop codon is not.  We make the following settings
+in the configuration file to account for that:
+
+START_IN_CDS = 1
+
+STOP_IN_CDS  = 0
+
+We see that the gene ID is annotated as gene="gene_2" and the
+transcript ID is annotated as mRNA="trnsc_5" and that attributes are
+seperated by a vertical bar "|".  We adjust the configuration file as follows:
+
+ATTRB_DELIMITER = \\s*|\\s*
+
+ATTRB_REGEX     = ^\\s*(\\S+)=(\\"[^\\"]+\\")\\s*$
+
+[GTF_ATTRB_MAP]
+
+#Code Tag    #GTF Tag
+
+gene_id    = gene
+
+trnsc_id   = mRNA
+
+The above input would provide the following GFF3 output:
+
+chr1    protein_coding  gene    28163331    28187711    .   +   .   ID=gene_2;
+
+chr1    protein_coding  mRNA    28163331    28187711    .   +   .   ID=trnsc_5; PARENT=gene_2;
+
+chr1    protein_coding  exon    28163331    28164986    .   +   .   ID=exon:trnsc_5:1; PARENT=trnsc_5;
+
+chr1    protein_coding  exon    28165075    28165231    .   +   .   ID=exon:trnsc_5:2; PARENT=trnsc_5;
+
+chr1    protein_coding  exon    28173088    28173224    .   +   .   ID=exon:trnsc_5:3; PARENT=trnsc_5;
+
+chr1    protein_coding  exon    28176514    28176665    .   +   .   ID=exon:trnsc_5:4; PARENT=trnsc_5;
+
+chr1    protein_coding  exon    28176847    28176950    .   +   .   ID=exon:trnsc_5:5; PARENT=trnsc_5;
+
+chr1    protein_coding  exon    28181630    28181713    .   +   .   ID=exon:trnsc_5:6; PARENT=trnsc_5;
+
+chr1    protein_coding  exon    28187071    28187711    .   +   .   ID=exon:trnsc_5:7; PARENT=trnsc_5;
+
+chr1    protein_coding  CDS 28163331    28164986    .   +   0   ID=CDS:trnsc_5:1; PARENT=trnsc_5;
+
+chr1    protein_coding  CDS 28165075    28165231    .   +   0   ID=CDS:trnsc_5:2; PARENT=trnsc_5;
+
+chr1    protein_coding  CDS 28173088    28173224    .   +   2   ID=CDS:trnsc_5:3; PARENT=trnsc_5;
+
+chr1    protein_coding  CDS 28176514    28176665    .   +   0   ID=CDS:trnsc_5:4; PARENT=trnsc_5;
+
+chr1    protein_coding  CDS 28176847    28176950    .   +   1   ID=CDS:trnsc_5:5; PARENT=trnsc_5;
+
+chr1    protein_coding  CDS 28181630    28181713    .   +   2   ID=CDS:trnsc_5:6; PARENT=trnsc_5;
+  
+chr1    protein_coding  CDS 28187071    28187381    .   +   2   ID=CDS:trnsc_5:7; PARENT=trnsc_5;
+
+**Another Example**
+
+Consider the following line from a GTF file:
+
+12	protein_coding	exon	4232147	4232167	.	+	.	gene_id "ENSRNOG00000000977"; transcript_id "ENSRNOT00000001298"; exon_number "1"; gene_name "Pnpla6"; gene_biotype "protein_coding"; transcript_name "Pnpla6-201"; exon_id "ENSRNOE00000475966";
+
+Then your Attribute delimiter will be:
+
+;\\s*
+
+And your Attribute regular expression will be:
+
+^\\s*(\\S+)\\s(\\"[^\\"]+\\")\\s*$
+
+-----
+
+**Outputs**
+
+A gff3 formatted file and the config file used.
+
+-----
+
+**Underlying tool gtf2gff3**
+
+AUTHOR
+
+  Barry Moore
+
+COPYRIGHT
+
+  Copyright (c) 2007, University of Utah
+
+LICENCE
+
+  This module is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
+
+CPAN
+
+  `CPAN link &lt;http://search.cpan.org/~lds/GBrowse-2.29/bin/gtf2gff3.pl&gt;`_
+
+ </help>
+
+</tool>
