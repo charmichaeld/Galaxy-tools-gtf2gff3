@@ -10,7 +10,10 @@ __test__
 
 *two*
 
-
+```perl
+use strict;
+print "Hello WOrld!";
+```
 
 Galaxy tool wrapper for gtf2gff3. This tool converts a gtf file to gff3.
 
